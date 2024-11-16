@@ -38,11 +38,11 @@ __global__ void updateParticles(double *position_d, double *velocity_d, double *
     // Load particle data into shared memory
     if (dim_idx < dim_d)
     {
-	printf("At %d \n", threadIdx.x);
+        printf("At %d \n", threadIdx.x);
         particle_pos[dim_idx] = position_d[idx];
         particle_vel[dim_idx] = velocity_d[idx];
         particle_pbest[dim_idx] = pbest_pos_d[idx];
-	printf("Loaded to shared mem for %d \n", threadIdx.x);
+        printf("Loaded to shared mem for %d \n", threadIdx.x);
     }
     __syncthreads();
 
@@ -50,21 +50,21 @@ __global__ void updateParticles(double *position_d, double *velocity_d, double *
 
     if (dim_idx < dim_d)
     {
-	   printf("Checking for %d \n", threadIdx.x);
-	    curandState state;
+        printf("Checking for %d \n", threadIdx.x);
+        curandState state;
         curand_init((unsigned long long)clock() + idx, 0, 0, &state);
 
         double r1 = curand_uniform_double(&state);
         double r2 = curand_uniform_double(&state);
         double v = particle_vel[dim_idx];
         printf("Checking v....  %d  %f \n", threadIdx.x, v);
-	double pos = particle_pos[dim_idx];
-	printf("Checking pos....  %d %f \n", threadIdx.x, pos);
+        double pos = particle_pos[dim_idx];
+        printf("Checking pos....  %d %f \n", threadIdx.x, pos);
         double pbest = double(particle_pbest[dim_idx]);
-	printf("Checking pbest....  %d  %f\n", threadIdx.x, gbest_position_d[dim_idx]);
+        printf("Checking pbest....  %d  %f\n", threadIdx.x, gbest_position_d[dim_idx]);
         double gbest_pos = double(gbest_position_d[dim_idx]);
         printf("CHECKING ONE LAST TIME  %d  %f\n", threadIdx.x, pbest);
-	// Update velocity
+        // Update velocity
         v = w_d * v +
             c1_d * r1 * (pbest - pos) +
             c2_d * r2 * (gbest_pos - pos);
@@ -85,7 +85,7 @@ __global__ void updateParticles(double *position_d, double *velocity_d, double *
         // Store back to global memory
         position_d[idx] = pos;
         velocity_d[idx] = v;
-	printf("done computing pos and vel for %d", threadIdx.x);
+        printf("done computing pos and vel for %d", threadIdx.x);
     }
     __syncthreads();
 
@@ -105,7 +105,7 @@ __global__ void updateParticles(double *position_d, double *velocity_d, double *
         // Update personal best if necessary
         if (fitness > pbest_fit_d[particle_idx])
         {
-	    pbest_fit_d[particle_idx] = fitness;
+            pbest_fit_d[particle_idx] = fitness;
 
             // Store all dimensions of this particle's position
             for (int i = 0; i < dim_d; i++)
@@ -165,7 +165,7 @@ __global__ void findGlobalBest(double *best_fitness_buf, double *best_positions_
         if (s_fitness[0] > gbest_fitness_d[0])
         {
             printf("found something better");
-	    int best_idx = (int)s_indices[0];
+            int best_idx = (int)s_indices[0];
             if (best_idx >= 0)
             {
                 gbest_fitness_d[0] = s_fitness[0];
@@ -193,10 +193,6 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
     p->pbest_pos = (double *)malloc(sizeof(double) * particle_cnt * dimensions);
     p->pbest_fit = (double *)malloc(sizeof(double) * particle_cnt);
 
-    // Initialize global best
-    gbest->position = (double *)malloc(sizeof(double) * dimensions);
-    gbest->fitness = -INFINITY;
-
     for (int i = 0; i < particle_cnt; i++)
     {
         double fitness = 0.0;
@@ -206,8 +202,8 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
         {
             int idx = i * dimensions + d;
             printf("idx is %d", idx);
-	    p->position[idx] = double(RND() * pos_range + min_pos);
-	    printf("init pos is %f \n", p->position[idx]);
+            p->position[idx] = double(RND() * pos_range + min_pos);
+            printf("init pos is %f \n", p->position[idx]);
             p->velocity[idx] = RND() * max_v;
             p->pbest_pos[idx] = double(p->position[idx]);
 
@@ -224,7 +220,6 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
             for (int d = 0; d < dimensions; d++)
             {
                 gbest->position[d] = p->position[i * dimensions + d];
-
             }
         }
     }
@@ -243,7 +238,7 @@ int main(int argc, char **argv)
     clock_t begin_app = clock();
     clock_t begin_init = begin_app;
     particle_Coal *p; // p : 粒子群
-    p = (particle_Coal*) malloc(sizeof(particle_Coal));
+    p = (particle_Coal *)malloc(sizeof(particle_Coal));
     double *position_d;
     double *velocity_d;
     double *fitness_d;
@@ -252,7 +247,7 @@ int main(int argc, char **argv)
     double *aux, *aux_pos;
     double *gbest_position_d;
     double *gbest_velocity_d;
-    double *gbest_fitness_d; 
+    double *gbest_fitness_d;
     int *lock_d; // block level lock for gbest
     int block_size = min(1024, args.blocks_per_grid);
 
@@ -263,17 +258,17 @@ int main(int argc, char **argv)
     particle_cnt = args.particle_cnt;   // 設粒子個數
     max_v = (max_pos - min_pos) * 1.0;  // 設最大速限
 
-    //p = (particle_Coal *)malloc(sizeof(particle_Coal));
-    // p->position  = (double *) malloc(sizeof(double)* particle_cnt);
-    // p->velocity  = (double *) malloc(sizeof(double)* particle_cnt);
-    // p->fitness   = (double *) malloc(sizeof(double)* particle_cnt);
-    // p->pbest_pos = (double *) malloc(sizeof(double)* particle_cnt);
-    // p->pbest_fit = (double *) malloc(sizeof(double)* particle_cnt);
+    // p = (particle_Coal *)malloc(sizeof(particle_Coal));
+    //  p->position  = (double *) malloc(sizeof(double)* particle_cnt);
+    //  p->velocity  = (double *) malloc(sizeof(double)* particle_cnt);
+    //  p->fitness   = (double *) malloc(sizeof(double)* particle_cnt);
+    //  p->pbest_pos = (double *) malloc(sizeof(double)* particle_cnt);
+    //  p->pbest_fit = (double *) malloc(sizeof(double)* particle_cnt);
     initialize_gbest(gbest, args.dimensions);
-    HANDLE_ERROR(cudaMalloc((void **)&gbest_position_d, sizeof(double)* args.dimensions));
-    HANDLE_ERROR(cudaMalloc((void **)&gbest_velocity_d, sizeof(double)* args.dimensions));
-    HANDLE_ERROR(cudaMalloc((void **)&gbest_fitness_d, sizeof(double)*1)); 
-    
+    HANDLE_ERROR(cudaMalloc((void **)&gbest_position_d, sizeof(double) * args.dimensions));
+    HANDLE_ERROR(cudaMalloc((void **)&gbest_velocity_d, sizeof(double) * args.dimensions));
+    HANDLE_ERROR(cudaMalloc((void **)&gbest_fitness_d, sizeof(double) * 1));
+
     ParticleInitCoal(p, args.dimensions); // 粒子初始化
     int dimensions = args.dimensions;
     printf("Allocating device memory\n");
@@ -298,10 +293,10 @@ int main(int argc, char **argv)
     printf("Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(pbest_fit_d, p->pbest_fit, sizeof(double) * particle_cnt, cudaMemcpyHostToDevice));
     printf("Copying to device\n");
-    HANDLE_ERROR(cudaMemcpy(gbest_position_d, gbest->position, sizeof(double)*args.dimensions, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMemcpy(gbest_velocity_d, gbest->velocity, sizeof(double)*args.dimensions, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(gbest_position_d, gbest->position, sizeof(double) * args.dimensions, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(gbest_velocity_d, gbest->velocity, sizeof(double) * args.dimensions, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMemcpy(gbest_fitness_d, gbest->g_fitness, sizeof(double), cudaMemcpyHostToDevice));
-    //HANDLE_ERROR(cudaMemcpy(gbest_d, &gbest, sizeof(particle), cudaMemcpyHostToDevice));
+    // HANDLE_ERROR(cudaMemcpy(gbest_d, &gbest, sizeof(particle), cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMemcpyToSymbol(w_d, &w, sizeof(double)));
     HANDLE_ERROR(cudaMemcpyToSymbol(c1_d, &c1, sizeof(double)));
     HANDLE_ERROR(cudaMemcpyToSymbol(c2_d, &c2, sizeof(double)));
@@ -318,7 +313,6 @@ int main(int argc, char **argv)
     clock_t end_init = clock();
     clock_t begin_exe = end_init;
     HANDLE_ERROR(cudaEventRecord(start));
-
 
     // Buffers for finding global best
     double *best_fitness_buf_d;
@@ -340,7 +334,7 @@ int main(int argc, char **argv)
     for (unsigned int i = 0; i < args.max_iter; i++)
     {
         // Update all particles
-	//printf("Still inside host, getting into the kernels now...;");
+        // printf("Still inside host, getting into the kernels now...;");
         updateParticles<<<particle_cnt, dimensions, particle_shared_mem>>>(
             position_d, velocity_d, fitness_d,
             pbest_pos_d, pbest_fit_d,
@@ -351,15 +345,15 @@ int main(int argc, char **argv)
             best_fitness_buf_d, best_positions_buf_d, particle_cnt, dim_d, gbest_fitness_d, gbest_position_d);
     }
     HANDLE_ERROR(cudaEventRecord(stop));
-    
+
     HANDLE_ERROR(cudaMemcpy(p->position, position_d, sizeof(double) * particle_cnt * dimensions, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(p->velocity, velocity_d, sizeof(double) * particle_cnt * dimensions, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(p->fitness, fitness_d, sizeof(double) * particle_cnt, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(p->pbest_pos, pbest_pos_d, sizeof(double) * dimensions * particle_cnt, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(p->pbest_fit, pbest_fit_d, sizeof(double) * particle_cnt, cudaMemcpyDeviceToHost));
-    
+
     HANDLE_ERROR(cudaMemcpy(gbest->g_fitness, gbest_fitness_d, sizeof(double), cudaMemcpyDeviceToHost));
-    
+
     clock_t end_exe = clock();
     HANDLE_ERROR(cudaEventSynchronize(stop));
     HANDLE_ERROR(cudaEventElapsedTime(&exe_time, start, stop));
@@ -372,7 +366,7 @@ int main(int argc, char **argv)
     cudaFree(fitness_d);
     cudaFree(pbest_pos_d);
     cudaFree(pbest_fit_d);
-    //cudaFree(gbest_d);
+    // cudaFree(gbest_d);
     cudaFree(lock_d);
 
     printf("best result: %10.6lf, %lf\n", gbest->position, gbest->g_fitness[0]);
@@ -386,4 +380,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
