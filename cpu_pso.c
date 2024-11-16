@@ -147,7 +147,6 @@ void ParticleInit(particle *p)
             gbest.pbest_fit = p[i].pbest_fit;
         }
     }
-    printf("Best init value comes out to be %lf \n", gbest.fitness);
 }
 
 int ParticleMove(particle *p)
@@ -230,7 +229,8 @@ void ParticleDisplay(particle *p)
 
 int main(int argc, char **argv)
 {
-    arguments args = {10000, 1024, 4, 128, 4, 10, 1}; // Default dimension is 3
+    // max iterations, particle count, dimensions, rest are irrelevant for CPUs
+    arguments args = {10000, 1024, 3, 128, 4, 10, 1};
     parseArgs(&args, argc, argv);
 
     clock_t begin_app = clock();
