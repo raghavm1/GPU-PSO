@@ -209,8 +209,8 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
             fitness += fit(p->position[idx]);
         }
 
-        p->fitness[i] = 0;// fitness;
-        p->pbest_fit[i] = 0;//fitness;
+        p->fitness[i] = fitness;
+        p->pbest_fit[i] = fitness;
         // Update global best if necessary
         if (fitness > gbest->g_fitness[0])
         {
@@ -221,7 +221,7 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
             }
         }
     }
-    gbest->g_fitness[0] = 0;
+    //gbest->g_fitness[0] = 0;
     printf("GBest fitness value:  %lf\n", gbest->g_fitness[0]);
 }
 
