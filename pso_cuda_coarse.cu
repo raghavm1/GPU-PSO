@@ -64,7 +64,7 @@ int parseArgs(arguments *args, int argc, char **argv){
 
     while(1) {
         // cmd_opt = getopt(argc, argv, "v:m:c:t:b::");
-        cmd_opt = getopt(argc, argv, "v:m:c:t:d::");
+        cmd_opt = getopt(argc, argv, "v:m:c:t:d:");
         if (cmd_opt == -1) {
             break;
         }
@@ -148,10 +148,13 @@ __constant__ int tile_size2;
 // HANDLE_ERROR(cudaMemcpyToSymbol(tile_size2, &block_size, sizeof(int)));
 
 __global__ void findBestInOneBlock(double *aux, double *aux_pos, int d, double *gbest_position_d, double *gbest_fitness_d) {
-    int idx = threadIdx.x;  // the block Id is 0. 
-    __shared__ double privateBest[100]; // assuming not more than 200 blocks are formed in move kernel
-    __shared__ double privateBestIndex[100]; // assuming not more than 200 blocks are formed in move kernel
-
+    int idx = threadIdx.x;  // the block Id is 0.
+  // printf("Grid dims are  %d\n", blockDim.x); 
+   extern __shared__ double privateBestShit[];
+   // __shared__ double privateBest[512]; // assuming not more than 200 blocks are formed in move kernel
+   // __shared__ double privateBestIndex[512]; // assuming not more than 200 blocks are formed in move kernel
+	    double *privateBest = &privateBestShit[0];
+    double *privateBestIndex = &privateBestShit[blockDim.x];
     // tile_size2 is num of blocks in move kernel
     if (idx < tile_size2) {  // this condition should always be true
         privateBest[idx] = aux[idx];
@@ -425,9 +428,9 @@ int main(int argc, char **argv){
         //     gbest_d, lock_d, aux, aux_pos, args.dimensions, gbest_position_d, gbest_fitness_d);
         move<<<args.blocks_per_grid, args.threads_per_block, sizeof(double) * (args.threads_per_block + 1)>>>(position_d, velocity_d, fitness_d, pbest_pos_d, pbest_fit_d, 
             lock_d, aux, aux_pos, args.dimensions, gbest_position_d, gbest_fitness_d, privateBestPosQueue_d, i);
-        HANDLE_ERROR(cudaEventRecord(stop));
+        //HANDLE_ERROR(cudaEventRecord(stop));
         cudaDeviceSynchronize();
-        findBestInOneBlock<<<1, block_size>>>(aux, aux_pos, args.dimensions, gbest_position_d, gbest_fitness_d);
+        findBestInOneBlock<<<1, block_size, sizeof(double) * block_size * 2>>>(aux, aux_pos, args.dimensions, gbest_position_d, gbest_fitness_d);
         cudaDeviceSynchronize();
         // printf("iter %d\n", i);                      
     }
