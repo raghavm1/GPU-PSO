@@ -169,7 +169,7 @@ __global__ void findGlobalBest(double *best_fitness_buf, double *best_positions_
             if (best_idx >= 0)
             {
                 gbest_fitness_d[0] = s_fitness[0];
-
+		//printf("gbest_fitness_d[0] : %f\n", gbest_fitness_d[0]);
                 // Copy all dimensions of the best position
                 for (int d = 0; d < dim_d; d++)
                 {
@@ -210,8 +210,9 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
         }
 
         p->fitness[i] = fitness;
-        p->pbest_fit[i] = fitness;
-        // Update global best if necessary
+        p->pbest_fit[i] =fitness;
+        
+	// Update global best if necessary
         if (fitness > gbest->g_fitness[0])
         {
             gbest->g_fitness[0] = fitness;
@@ -222,7 +223,7 @@ void ParticleInitCoal(particle_Coal *p, int dimensions)
         }
     }
     //gbest->g_fitness[0] = 0;
-    printf("GBest fitness value:  %lf\n", gbest->g_fitness[0]);
+    //printf("GBest fitness value:  %lf\n", gbest->g_fitness[0]);
 }
 
 int main(int argc, char **argv)
@@ -245,7 +246,6 @@ int main(int argc, char **argv)
     double *pbest_fit_d;
     double *aux, *aux_pos;
     double *gbest_position_d;
-    double *gbest_velocity_d;
     double *gbest_fitness_d;
     int *lock_d; // block level lock for gbest
     int block_size = min(1024, args.blocks_per_grid);
@@ -271,8 +271,6 @@ int main(int argc, char **argv)
     initialize_gbest(gbest, args.dimensions);
     ParticleInitCoal(p, args.dimensions); // 粒子初始化
     int dimensions = args.dimensions;
-    printf("Allocating device memory\n");
-    particle *gbest_d;
     // HANDLE_ERROR(cudaMalloc((void **)&p_d, sizeof(particle_Coal)));
     HANDLE_ERROR(cudaMalloc((void **)&position_d, sizeof(double) * particle_cnt * dimensions));
     HANDLE_ERROR(cudaMalloc((void **)&velocity_d, sizeof(double) * particle_cnt * dimensions));
@@ -282,17 +280,11 @@ int main(int argc, char **argv)
     HANDLE_ERROR(cudaMalloc((void **)&lock_d, sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&aux, sizeof(double) * args.blocks_per_grid));
     HANDLE_ERROR(cudaMalloc((void **)&aux_pos, sizeof(double) * args.blocks_per_grid));
-    printf("[Original] Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(position_d, p->position, sizeof(double) * particle_cnt * dimensions, cudaMemcpyHostToDevice));
-    printf("Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(velocity_d, p->velocity, sizeof(double) * particle_cnt * dimensions, cudaMemcpyHostToDevice));
-    printf("Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(fitness_d, p->fitness, sizeof(double) * particle_cnt, cudaMemcpyHostToDevice));
-    printf("Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(pbest_pos_d, p->pbest_pos, sizeof(double) * dimensions * particle_cnt, cudaMemcpyHostToDevice));
-    printf("Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(pbest_fit_d, p->pbest_fit, sizeof(double) * particle_cnt, cudaMemcpyHostToDevice));
-    printf("Copying to device\n");
     HANDLE_ERROR(cudaMemcpy(gbest_position_d, gbest->position, sizeof(double) * args.dimensions, cudaMemcpyHostToDevice));
     //HANDLE_ERROR(cudaMemcpy(gbest_velocity_d, gbest->velocity, sizeof(double) * args.dimensions, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMemcpy(gbest_fitness_d, gbest->g_fitness, sizeof(double), cudaMemcpyHostToDevice));
@@ -309,9 +301,7 @@ int main(int argc, char **argv)
     HANDLE_ERROR(cudaMemcpyToSymbol(tile_size, &args.threads_per_block, sizeof(int)));
     HANDLE_ERROR(cudaMemcpyToSymbol(tile_size2, &block_size, sizeof(int)));
     HANDLE_ERROR(cudaMemset(lock_d, 0, sizeof(int)));
-    printf("Copied all !\n");
     clock_t end_init = clock();
-    clock_t begin_exe = end_init;
     HANDLE_ERROR(cudaEventRecord(start));
 
     // Buffers for finding global best
