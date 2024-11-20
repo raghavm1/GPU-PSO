@@ -229,13 +229,11 @@ __global__ void updateParticles(double *position_d, double *velocity_d, double *
                               int dim_d, double *gbest_position_d, double *gbest_fitness_d,
                               int particles_per_block, int dimensions_per_thread)
 {
-    // extern __shared__ double shared_mem[];
+     extern __shared__ double shared_mem[];
     
-    __shared__ double privateBestQueue[512]; // assuming not more than 1024 particles per block
-    __shared__ double privateBestQueueIndex[512]; // assuming not more than 1024 particles per block
+    double *privateBestQueue = &shared_mem[0];
+    double *privateBestQueueIndex = &shared_mem[particles_per_block];
 
-    // double *privateBestQueue = (double *)sharedMemory;
-    // double *privateBestPosQueue = (double *)&sharedMemory[tile_size];
     __shared__ unsigned int queue_num;
     if (threadIdx.x == 0) {
         queue_num = 0;
@@ -246,11 +244,9 @@ __global__ void updateParticles(double *position_d, double *velocity_d, double *
     // Calculate which particles this block handles
     int first_particle = blockIdx.x * particles_per_block; // id of first particle in block
     int thread_idx = threadIdx.x; // id of thread wrt to corresponding block
-    int total_threads = blockDim.x; // number of threads in block
     
     // Shared memory organization
     // Each particle needs space for position, velocity, and pbest
-    int particle_stride = dim_d;  // stride between particles in shared memory
     // double *shared_positions = &shared_mem[0];
     // double *shared_velocities = &shared_mem[particles_per_block * particle_stride];
     // double *shared_pbests = &shared_mem[2 * particles_per_block * particle_stride];
@@ -495,7 +491,6 @@ int main(int argc, char **argv)
     double *pbest_fit_d;
     double *aux, *aux_pos;
     double *gbest_position_d;
-    double *gbest_velocity_d;
     double *gbest_fitness_d;
     int *lock_d; // block level lock for gbest
     int block_size = min(1024, args.blocks_per_grid);
@@ -522,7 +517,6 @@ int main(int argc, char **argv)
     ParticleInitCoal(p, args.dimensions); // 粒子初始化
     int dimensions = args.dimensions;
     printf("Allocating device memory\n");
-    particle *gbest_d;
     // HANDLE_ERROR(cudaMalloc((void **)&p_d, sizeof(particle_Coal)));
     HANDLE_ERROR(cudaMalloc((void **)&position_d, sizeof(double) * particle_cnt * dimensions));
     HANDLE_ERROR(cudaMalloc((void **)&velocity_d, sizeof(double) * particle_cnt * dimensions));
@@ -561,7 +555,6 @@ int main(int argc, char **argv)
     HANDLE_ERROR(cudaMemset(lock_d, 0, sizeof(int)));
     printf("Copied all !\n");
     clock_t end_init = clock();
-    clock_t begin_exe = end_init;
     HANDLE_ERROR(cudaEventRecord(start));
 
     // Buffers for finding global best
@@ -601,7 +594,7 @@ int main(int argc, char **argv)
         //     pbest_pos_d, pbest_fit_d,
         //     best_fitness_buf_d, best_positions_buf_d, dim_d, gbest_position_d, gbest_fitness_d);
 
-        updateParticles<<<num_blocks, threads_per_block>>>(position_d, velocity_d, fitness_d,
+        updateParticles<<<num_blocks, threads_per_block, 2*sizeof(double)*particles_per_block>>>(position_d, velocity_d, fitness_d,
                               pbest_pos_d, pbest_fit_d,
                               best_fitness_buf_d, best_positions_buf_d, 
                               dimensions, gbest_position_d, gbest_fitness_d,
