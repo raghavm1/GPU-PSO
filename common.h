@@ -8,34 +8,26 @@
 #define MAX_ITERA 100000
 #define BlocksPerGrid ((COUNT - 1) / ThreadsPerBlock + 1)
 #define ThreadsPerBlock 1024
-#define RND() ((double)rand() / RAND_MAX) // 產生[0,1] 亂數
+#define RND() ((double)rand() / RAND_MAX)
 #define min(x, y) (x) < (y) ? (x) : (y)
 #define COUNT 4096
 
-// typedef struct tag_particle_Coal{
-//     double position[COUNT];  // 目前位置, 即x value
-//     double velocity[COUNT];  // 目前粒子速度
-//     double fitness[COUNT] ;  // 適應函式值
-//     double pbest_pos[COUNT]; // particle 目前最好位置
-//     double pbest_fit[COUNT]; // particle 目前最佳適應值
-// } particle_Coal;
-
 typedef struct tag_particle_Coal
 {
-    double *position;  // 目前位置, 即x value
-    double *velocity;  // 目前粒子速度
-    double *fitness;   // 適應函式值
-    double *pbest_pos; // particle 目前最好位置
-    double *pbest_fit; // particle 目前最佳適應值
+    double *position;
+    double *velocity;
+    double *fitness;
+    double *pbest_pos;
+    double *pbest_fit;
 } particle_Coal;
 
 typedef struct tag_particle
 {
-    double *position;  // 目前位置, 即x value
-    double *velocity;  // 目前粒子速度
-    double fitness;   // 適應函式值
-    double *pbest_pos; // particle 目前最好位置
-    double pbest_fit; // particle 目前最佳適應值
+    double *position;
+    double *velocity;
+    double fitness;
+    double *pbest_pos;
+    double pbest_fit;
     double *g_fitness;
 } particle;
 
@@ -49,30 +41,27 @@ typedef struct tag_arguments
     int dimensions;
 } arguments;
 
-double w, c1, c2;          // 相關權重參數
-double max_v;              // 最大速度限制
-double max_pos, min_pos;   // 最大,小位置限制
-unsigned int particle_cnt; // 粒子數量
+double w, c1, c2;
+double max_v;
+double max_pos, min_pos;
+unsigned int particle_cnt;
 
 particle *gbest;
 
 void initialize_gbest(particle *gbest, int dimensions)
 {
-    // Allocate memory for position and pbest_pos
     gbest->position = (double *)malloc(sizeof(double) * dimensions);
-    gbest->velocity = NULL; // If velocity is not needed, set it to NULL
+    gbest->velocity = NULL;
     gbest->pbest_pos = (double *)malloc(sizeof(double) * dimensions);
 
-    // Initialize fitness and pbest_fit
-    gbest->g_fitness = (double *) malloc(sizeof(double)*1);  
+    gbest->g_fitness = (double *)malloc(sizeof(double) * 1);
     gbest->g_fitness[0] = -DBL_MAX;
     gbest->pbest_fit = -DBL_MAX;
 
-    // Optionally initialize position and pbest_pos to some default values
     for (int i = 0; i < dimensions; i++)
     {
-        gbest->position[i] = 0.0;  // Default to 0.0
-        gbest->pbest_pos[i] = 0.0; // Default to 0.0
+        gbest->position[i] = 0.0;
+        gbest->pbest_pos[i] = 0.0;
     }
 }
 
@@ -82,7 +71,6 @@ void free_gbest()
     free(gbest->pbest_pos);
 }
 
-// void ParticleInitCoal(particle_Coal *p); // 粒子初始化
 void ParticleInitCoal(particle_Coal *p);
 void ParticleInit(particle *p);
 
@@ -98,21 +86,14 @@ static void HandleError(cudaError_t err, const char *file, int line)
 int pargeArgs(arguments *args, int argc, char **argv)
 {
     int cmd_opt = 0;
-    // fprintf(stderr, "argc:%d\n", argc);
     while (1)
     {
-        // fprintf(stderr, "proces index:%d\n", optind);
         cmd_opt = getopt(argc, argv, "v:m:c:t:b:d:");
-        /* End condition always first */
         if (cmd_opt == -1)
         {
             break;
         }
-        /* Print option when it is valid */
-        // if (cmd_opt != '?') {
-        //     fprintf(stderr, "option:-%c\n", cmd_opt);
-        // }
-        /* Lets parse */
+
         switch (cmd_opt)
         {
         case 'm':
@@ -128,11 +109,12 @@ int pargeArgs(arguments *args, int argc, char **argv)
             args->blocks_per_grid = atoi(optarg);
             break;
         case 'd': // dimensions
-            if (optarg == NULL) {
-        	args->dimensions = 1;	
-	    }
-	    else
-	    args->dimensions = atoi(optarg);
+            if (optarg == NULL)
+            {
+                args->dimensions = 1;
+            }
+            else
+                args->dimensions = atoi(optarg);
             break;
         case 'v':
             args->verbose = atoi(optarg);
@@ -146,20 +128,6 @@ int pargeArgs(arguments *args, int argc, char **argv)
             break;
         }
     }
-    // Do we have args?
-    // if (argc > optind) {
-    //    int i = 0;
-    //    for (i = optind; i < argc; i++) {
-    //        fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
-    //    }
-    //}
-
-    // TODO: check there, when threads_per_block is bigger than particle_cnt
-    // the block level atomic lock will be fail
-    // [Result]: save value to shared memory should check that value is valid
-    //           or just set threads_per_block is bigger than particle_cnt
-    // if(args->threads_per_block > args->particle_cnt)
-    //    args->threads_per_block = args->particle_cnt;
     if (args->threads_per_block && args->particle_cnt && args->dimensions == 1)
         args->blocks_per_grid = ((args->particle_cnt - 1) / args->threads_per_block + 1);
     else if (args->dimensions > 1)
