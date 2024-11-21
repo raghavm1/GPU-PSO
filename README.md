@@ -11,12 +11,12 @@ But if you'd like, I've added flag info and sample arguments to work with.
 
 Arguments 
 
--m (max iterations)
--c (particle count)
--d (dimensions)
--t (threads per block)
--b (blocks)
--v (verbose, to output argument values when running the code)
+- -m (max iterations)
+- -c (particle count)
+- -d (dimensions)
+- -t (threads per block)
+- -b (blocks)
+- -v (verbose, to output argument values when running the code)
 
 ### Coarse grained
 
